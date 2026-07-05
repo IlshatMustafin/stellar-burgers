@@ -16,12 +16,9 @@ export const Login: FC = () => {
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
     if (!email || !password) return;
-
     dispatch(loginUserThunk({ email, password }))
       .unwrap()
-      .then((user) => {
-        localStorage.setItem('token', 'true');
-
+      .then(() => {
         const from =
           (location.state as { from?: Location })?.from?.pathname || '/';
         navigate(from, { replace: true });

@@ -3,6 +3,7 @@ import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from '../../services/store';
 import { fetchIngredients } from '../../services/slices/ingredientsSlice';
 import { getUserThunk, init } from '../../services/slices/userSlice';
+import { getCookie } from '../../utils/cookie';
 
 import {
   ConstructorPage,
@@ -42,10 +43,11 @@ const App = () => {
 
   useEffect(() => {
     dispatch(fetchIngredients());
+    const hasAccessToken = getCookie('accessToken');
+    const hasRefreshToken = localStorage.getItem('refreshToken');
 
-    const token = localStorage.getItem('token');
-    if (token) {
-      dispatch(getUserThunk({ token }));
+    if (hasAccessToken || hasRefreshToken) {
+      dispatch(getUserThunk());
     } else {
       dispatch(init());
     }
