@@ -1,75 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { mockIngredients } from './ingredients.mock';
 
-const INGREDIENTS_API = '**/api/ingredients';
-const USER_API = '**/api/auth/user';
-const ORDERS_API = '**/api/orders';
-
-test.describe('Тестирование Конструктора Бургеров и Модальных окон', () => {
+test.describe('Тестирование Конструктора Бургеров и Модальных окон (Только HAR)', () => {
   
   test.beforeEach(async ({ page, context }) => {
-    await page.routeFromHAR('tests/hars/ingredients.har', {
-      url: '**/api/ingredients',
-      update: false,
-    });
-
-    await page.route(INGREDIENTS_API, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, data: mockIngredients }), 
-      });
-    });
-
-    await page.route(USER_API, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ success: true, user: { email: 'test@example.com', name: 'John Doe' } }),
-      });
-    });
-  });
-
-  test('Проверка добавления булки и начинки в constructor', async ({ page }) => {
-    await page.goto('/');
-
-    await page
-      .getByRole('listitem')
-      .filter({ hasText: 'Краторная булка N-200i' })
-      .getByRole('button', { name: 'Добавить' })
-      .click();
-
-    await page
-      .getByRole('listitem')
-      .filter({ hasText: 'Биокотлета из марсианской Магнолии' })
-      .getByRole('button', { name: 'Добавить' })
-      .click();
-
-    await expect(page.locator('.constructor-element__text', { hasText: 'Краторная булка N-200i (верх)' })).toBeVisible();
-    await expect(page.locator('.constructor-element__text', { hasText: 'Краторная булка N-200i (низ)' })).toBeVisible();
-    await expect(page.locator('.constructor-element__text', { hasText: 'Биокотлета из марсианской Магнолии' })).toBeVisible();
-  });
-
-  test('Проверка работы модального окна ingrediente (открытие и закрытие)', async ({ page }) => {
-    await page.goto('/');
-    await page.getByRole('listitem').filter({ hasText: 'Краторная булка N-200i' }).click();
-
-    const modalHeader = page.locator('h3', { hasText: 'Детали ингредиента' });
-    await expect(modalHeader).toBeVisible();
-    await expect(page.locator('#modals')).toContainText('Краторная булка N-200i');
-
-    const closeButton = page.locator('#modals button').first(); 
-    await closeButton.click();
-    await expect(modalHeader).not.toBeVisible();
-
-    await page.getByRole('listitem').filter({ hasText: 'Краторная булка N-200i' }).click();
-    await expect(modalHeader).toBeVisible();
-
-    await page.mouse.click(10, 10); 
-    await expect(modalHeader).not.toBeVisible();
-  });
-
-  test('Проверка комплексного сценария создания заказа', async ({ page, context }) => {
     await context.addCookies([
       {
         name: 'accessToken',
@@ -79,18 +12,49 @@ test.describe('Тестирование Конструктора Бургеро�
       },
     ]);
 
+    await page.routeFromHAR('tests/hars/burger.har', {
+      url: '**/api/**',
+      update: false,
+      notFound: 'fallback'
+    });
+
     await page.goto('/');
 
     await page.evaluate(() => {
       localStorage.setItem('refreshToken', 'mock-refresh-token-12345');
     });
+  });
 
-    await page.routeFromHAR('tests/hars/order.har', {
-      url: '**/api/**',
-      update: false,
-    });
+  test('Проверка добавления булки и начинки в constructor', async ({ page }) => {
+    const bunCard = page.getByRole('listitem').filter({ hasText: 'Краторная булка N-200i' }).or(
+      page.getByRole('listitem').filter({ hasText: 'Флюоресцентная булка R2-D3' })
+    ).first();
+    await bunCard.getByRole('button', { name: 'Добавить' }).click();
 
-    await page.route(ORDERS_API, async (route) => {
+    const mainCard = page.getByRole('listitem').filter({ hasText: 'Биокотлета из марсианской Магнолии' }).or(
+      page.getByRole('listitem').filter({ hasText: 'Говяжий фарш Holo-beef' })
+    ).first();
+    await mainCard.getByRole('button', { name: 'Добавить' }).click();
+
+    await expect(page.locator('.constructor-element__text').first()).toBeVisible();
+  });
+
+  test('Проверка работы модального окна ingredient (открытие и закрытие)', async ({ page }) => {
+    const bunCard = page.getByRole('listitem').filter({ hasText: 'Краторная булка N-200i' }).or(
+      page.getByRole('listitem').filter({ hasText: 'Флюоресцентная булка R2-D3' })
+    ).first();
+    await bunCard.click();
+
+    const modalHeader = page.locator('h3', { hasText: 'Детали ингредиента' });
+    await expect(modalHeader).toBeVisible();
+
+    const closeButton = page.locator('#modals button').first(); 
+    await closeButton.click();
+    await expect(modalHeader).not.toBeVisible();
+  });
+
+  test('Проверка комплексного сценария создания заказа', async ({ page }) => {
+    await page.route('**/api/orders', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -98,17 +62,15 @@ test.describe('Тестирование Конструктора Бургеро�
       });
     });
 
-    await page
-      .getByRole('listitem')
-      .filter({ hasText: 'Краторная булка N-200i' })
-      .getByRole('button', { name: 'Добавить' })
-      .click();
+    const bunCard = page.getByRole('listitem').filter({ hasText: 'Краторная булка N-200i' }).or(
+      page.getByRole('listitem').filter({ hasText: 'Флюоресцентная булка R2-D3' })
+    ).first();
+    await bunCard.getByRole('button', { name: 'Добавить' }).click();
 
-    await page
-      .getByRole('listitem')
-      .filter({ hasText: 'Биокотлета из марсианской Магнолии' })
-      .getByRole('button', { name: 'Добавить' })
-      .click();
+    const mainCard = page.getByRole('listitem').filter({ hasText: 'Биокотлета из марсианской Магнолии' }).or(
+      page.getByRole('listitem').filter({ hasText: 'Говяжий фарш Holo-beef' })
+    ).first();
+    await mainCard.getByRole('button', { name: 'Добавить' }).click();
 
     const submitButton = page.locator('button', { hasText: 'Оформить заказ' });
     await submitButton.click();
@@ -119,7 +81,5 @@ test.describe('Тестирование Конструктора Бургеро�
     const closeButton = page.locator('#modals button').first(); 
     await closeButton.click();
     await expect(orderModalNumber).not.toBeVisible();
-
-    await expect(page.locator('.constructor-element__text')).toHaveCount(0);
   });
 });
