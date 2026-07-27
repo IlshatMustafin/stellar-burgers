@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Тестирование Конструктора Бургеров и Модальных окон (Только HAR)', () => {
   
-  test.beforeEach(async ({ page, context }) => {пше
+  test.beforeEach(async ({ page, context }) => {
     await context.addCookies([
       {
         name: 'accessToken',
