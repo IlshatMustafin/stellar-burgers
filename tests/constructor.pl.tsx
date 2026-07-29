@@ -2,27 +2,27 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Тестирование Конструктора Бургеров и Модальных окон (Только HAR)', () => {
   
-  test.beforeEach(async ({ page, context }) => {
-    await context.addCookies([
-      {
-        name: 'accessToken',
-        value: 'Bearer-mock-token-12345',
-        domain: 'localhost',
-        path: '/',
-      },
-    ]);
+test.beforeEach(async ({ page, context }) => {
+  await context.addCookies([
+    {
+      name: 'accessToken',
+      value: 'Bearer-mock-token-12345',
+      domain: 'localhost',
+      path: '/',
+    },
+  ]);
 
-    await page.routeFromHAR('tests/hars/burger.har', {
-      url: '**/api/**',
-      update: false,
-    });
-
-    await page.goto('/');
-
-    await page.evaluate(() => {
-      localStorage.setItem('refreshToken', 'mock-refresh-token-12345');
-    });
+  await context.addInitScript(() => {
+    window.localStorage.setItem('refreshToken', 'mock-refresh-token-12345');
   });
+
+  await page.routeFromHAR('tests/hars/burger.har', {
+    url: '**/api/**',
+    update: false,
+  });
+
+  await page.goto('/');
+});
 
   test('Проверка добавления булки и начинки в constructor', async ({ page }) => {
     const bunCard = page.getByRole('listitem').filter({ hasText: 'Краторная булка N-200i' }).first();
@@ -60,7 +60,7 @@ test.describe('Тестирование Конструктора Бургеро�
     const orderTitle = page.locator('text=идентификатор заказа').first();
     await expect(orderTitle).toBeVisible();
 
-    const orderNumberText = page.locator('text=108518').or(page.locator('text=/\\d+/')).first();
+    const orderNumberText = page.locator('text=108518');
     await expect(orderNumberText).toBeVisible();
 
     const closeButton = page.locator('#modals button').first();
